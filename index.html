@@ -39,8 +39,9 @@
 
 <ol>
 <li><p>Add a <code>nexus</code> application to Crowd with a <code>SECRET</code> secret</p></li>
+<li><p>Look into the file <code>bin/nexus.vmoptions</code> to locate the value of parameter <code>karaf.etc</code></p></li>
 <li>
-<p>Create a file called <code>crowd-plugin.properties</code> under <code>NEXUS_HOME/etc</code></p>
+<p>Create a file called <code>crowd-plugin.properties</code> under <code>&lt;karaf.etc&gt;</code> folder</p>
 
 <pre><code>applicationName=nexus
 applicationPassword=SECRET
@@ -60,7 +61,7 @@ crowdServerUrl=http://host:port/crowd/
 </ul>
 </li>
 <li><p>Copy the bundle under <code>NEXUS_HOME/system/com/roumanoff/nexus/nexus-crowd-plugin/&lt;version&gt;/nexus-crowd-plugin-&lt;version&gt;.jar</code></p></li>
-<li><p>Modify the file <code>NEXUS_HOME/etc/startup.properties</code> or <code>NEXUS_HOME/etc/karaf/startup.properties</code>, add the new line <code>mvn\:com.roumanoff.nexus/nexus-crowd-plugin/&lt;version&gt; = 101</code></p></li>
+<li><p>Modify the file <code>&lt;karaf.etc&gt;/startup.properties</code>, add the new line <code>mvn\:com.roumanoff.nexus/nexus-crowd-plugin/&lt;version&gt; = 101</code></p></li>
 <li><p>Start Nexus and use the Administration-&gt;Security-&gt;Realms page to add <code>OSS Crowd Authentication Realm</code> to the list of active realms (at the bottom so you can still use the admin account stored in Nexus DB for which you have changed the password, right ?).</p></li>
 </ol>
 
