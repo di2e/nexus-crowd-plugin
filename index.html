@@ -28,50 +28,95 @@
 
     <div class="container">
       <section id="main_content">
-        <h3>
-<a name="welcome-to-nexus-crowd-plugin" class="anchor" href="#welcome-to-nexus-crowd-plugin"><span class="octicon octicon-link"></span></a>Welcome to Nexus-crowd-plugin.</h3>
+<h1><a id="user-content-welcome-to-nexus-crowd-plugin" class="anchor" href="#welcome-to-nexus-crowd-plugin" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Welcome to Nexus-crowd-plugin.</h1>
 
 <p>This fork is to keep an up to date version of the nexus-crowd-plugin. With so many updates both on the nexus and crowd front, it's hard to keep track! And those two awesome products work so well together....</p>
 
+<h2><a id="user-content-setup" class="anchor" href="#setup" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Setup</h2>
+
 <h3>
-<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h3>
+<a id="user-content-usage-for-nexus-3x" class="anchor" href="#usage-for-nexus-3x" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Usage for Nexus 3.x</h3>
 
 <ol>
 <li><p>Add a <code>nexus</code> application to Crowd with a <code>SECRET</code> secret</p></li>
-<li><p>Create a file called <code>crowd-plugin.xml</code> under <code>sonatype-work/nexus/conf</code></p></li>
-</ol><pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;crowdConfiguration&gt;
-  &lt;crowdServerUrl&gt;http://[crowdhost]:[crowdport]/crowd/&lt;/crowdServerUrl&gt;
-  &lt;applicationName&gt;nexus&lt;/applicationName&gt;
-  &lt;applicationPassword&gt;SECRET&lt;/applicationPassword&gt;
-&lt;/crowdConfiguration&gt;
+<li>
+<p>Create a file called <code>crowd-plugin.properties</code> under <code>NEXUS_HOME/etc</code></p>
+
+<pre><code>applicationName=nexus
+applicationPassword=SECRET
+crowdServerUrl=http://host:port/crowd/
 </code></pre>
 
+<p>You can also use the following properties</p>
+
+<ul>
+<li>cacheTTL (value is seconds; default value is 3600 seconds)</li>
+<li>httpMaxConnections (default value is 20)</li>
+<li>httpTimeout (value in milliseconds; default value is 5000msecs)</li>
+<li>httpProxyHost</li>
+<li>httpProxyPort</li>
+<li>httpProxyUsername</li>
+<li>httpProxyPassword</li>
+</ul>
+</li>
+<li><p>Copy the bundle under <code>NEXUS_HOME/system/com/roumanoff/nexus/nexus-crowd-plugin/&lt;version&gt;/nexus-crowd-plugin-&lt;version&gt;.jar</code></p></li>
+<li><p>Modify the file <code>NEXUS_HOME/etc/startup.properties</code> or <code>NEXUS_HOME/etc/karaf/startup.properties</code>, add the new line <code>mvn\:com.roumanoff.nexus/nexus-crowd-plugin/&lt;version&gt; = 101</code></p></li>
+<li><p>Start Nexus and use the Administration-&gt;Security-&gt;Realms page to add <code>OSS Crowd Authentication Realm</code> to the list of active realms (at the bottom so you can still use the admin account stored in Nexus DB for which you have changed the password, right ?).</p></li>
+</ol>
+
+<h3>
+<a id="user-content-usage-for-nexus--30" class="anchor" href="#usage-for-nexus--30" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Usage for Nexus &lt; 3.0</h3>
+
 <ol>
+<li><p>Add a <code>nexus</code> application to Crowd with a <code>SECRET</code> secret</p></li>
+<li>
+<p>Create a file called <code>crowd-plugin.xml</code> under <code>sonatype-work/nexus/conf</code></p>
+
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;crowdConfiguration&gt;
+&lt;crowdServerUrl&gt;http://host:port/crowd/&lt;/crowdServerUrl&gt;
+&lt;applicationName&gt;nexus&lt;/applicationName&gt;
+&lt;applicationPassword&gt;SECRET&lt;/applicationPassword&gt;
+&lt;/crowdConfiguration&gt;
+</code></pre>
+</li>
 <li><p>unzip the bundle under <code>sonatype-work/nexus/plugin-repository</code></p></li>
 <li><p>Start Nexus and use the Administration-&gt;Server panel to add <code>OSS Crowd Authentication Realm</code> to the list of active realms.</p></li>
-</ol><h3>
-<a name="plugin-download" class="anchor" href="#plugin-download"><span class="octicon octicon-link"></span></a>Plugin Download</h3>
+</ol>
+
+<h2>
+<a id="user-content-plugin-download" class="anchor" href="#plugin-download" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Plugin Download</h2>
 
 <ul>
 <li>For nexus 2.7.x: <a href="https://github.com/PatrickRoumanoff/nexus-crowd-plugin/wiki/nexus-crowd-plugin-2.7.0-bundle.zip">nexus-crowd-plugin-2.7.0-bundle.zip</a>
 </li>
 <li>For nexus before 2.7.x: <a href="https://github.com/PatrickRoumanoff/nexus-crowd-plugin/wiki/nexus-crowd-plugin-2.0.7-bundle.zip">nexus-crowd-plugin-2.0.7-bundle.zip</a>
 </li>
-</ul><p>Watch out for the confusing version numbers, version 2.7.0 is for nexus 2.7 and version 2.0.7 is for nexus before 2.7.</p>
+<li>For nexus 2.8.x: <a href="https://github.com/PatrickRoumanoff/nexus-crowd-plugin/wiki/nexus-crowd-plugin-2.8.1-bundle.zip">nexus-crowd-plugin-2.8.1-bundle.zip</a>
+</li>
+<li>For nexus 2.9.x: <a href="https://github.com/PatrickRoumanoff/nexus-crowd-plugin/wiki/nexus-crowd-plugin-2.9.0-bundle.zip">nexus-crowd-plugin-2.9.0-bundle.zip</a>
+</li>
+<li>For nexus 3.0.x: <a href="https://github.com/PatrickRoumanoff/nexus-crowd-plugin/wiki/nexus-crowd-plugin-3.0.0.jar">nexus-crowd-plugin-3.0.0.jar</a>
+</li>
+<li>For nexus 3.1.x: <a href="https://github.com/PatrickRoumanoff/nexus-crowd-plugin/wiki/nexus-crowd-plugin-3.1.0.jar">nexus-crowd-plugin-3.1.0.jar</a>
+</li>
+</ul>
 
-<h3>
-<a name="plan-for-next-iterations" class="anchor" href="#plan-for-next-iterations"><span class="octicon octicon-link"></span></a>Plan for next iterations</h3>
+<p>Watch out for the confusing version numbers, version 2.7.0 is for nexus 2.7 and version 2.0.7 is for nexus before 2.7.</p>
+
+<h2>
+<a id="user-content-plan-for-next-iterations" class="anchor" href="#plan-for-next-iterations" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Plan for next iterations</h2>
 
 <ul>
-<li>use a properties file (instead of XML)</li>
 <li>enable a group filter</li>
 <li>provide a configuration UI</li>
 <li>enable Single Sign On (SSO)</li>
-</ul><h3>
-<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
+</ul>
 
-<p><a href="https://github.com/PatrickRoumanoff" class="user-mention">@PatrickRoumanoff</a> and <a href="https://github.com/flopma" class="user-mention">@flopma</a> based on initial work by <a href="https://github.com/justinedelson" class="user-mention">@justinedelson</a> from <a href="https://github.com/sonatype" class="user-mention">@sonatype</a></p>
+<h2>
+<a id="user-content-authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Authors and Contributors</h2>
+
+<p>@PatrickRoumanoff and @flopma based on initial work by @justinedelson from @sonatype</p>
       </section>
     </div>
 
