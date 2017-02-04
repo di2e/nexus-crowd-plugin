@@ -10,7 +10,7 @@
 
 	<groupId>com.roumanoff.nexus</groupId>
 	<artifactId>nexus-crowd-plugin</artifactId>
-	<version>2.9.0</version>
+	<version>2.9.1-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<packaging>nexus-plugin</packaging>
 
@@ -72,22 +72,11 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- Allowing Crowd REST calls -->
+		<!-- Crowd REST Library -->
 		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-client</artifactId>
-			<version>1.18.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.sun.jersey.contribs</groupId>
-			<artifactId>jersey-apache-client</artifactId>
-			<version>1.18.1</version>
-			<exclusions>
-				<exclusion>
-					<groupId>commons-logging</groupId>
-					<artifactId>commons-logging</artifactId>
-				</exclusion>
-			</exclusions>
+			<groupId>com.atlassian.crowd.client</groupId>
+			<artifactId>atlassian-crowd-rest-client</artifactId>
+			<version>1.4</version>
 		</dependency>
 
 	</dependencies>

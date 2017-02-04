@@ -12,7 +12,10 @@
  */
 package org.sonatype.nexus.plugins.crowd.client;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.enterprise.inject.Typed;
@@ -20,9 +23,15 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.atlassian.crowd.embedded.api.SearchRestriction;
+import com.atlassian.crowd.search.builder.Combine;
+import com.atlassian.crowd.search.builder.Restriction;
+import com.atlassian.crowd.search.query.entity.restriction.constants.UserTermKeys;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonatype.security.usermanagement.AbstractReadOnlyUserManager;
+import org.sonatype.security.usermanagement.DefaultUser;
 import org.sonatype.security.usermanagement.RoleIdentifier;
 import org.sonatype.security.usermanagement.User;
 import org.sonatype.security.usermanagement.UserManager;
@@ -32,6 +41,7 @@ import org.sonatype.security.usermanagement.UserSearchCriteria;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.sonatype.security.usermanagement.UserStatus;
 
 /**
  * @author justin
@@ -84,8 +94,9 @@ public class CrowdUserManager extends AbstractReadOnlyUserManager {
     public User getUser(String userId) throws UserNotFoundException {
         if (crowdClientHolder.isConfigured()) {
             try {
-                User user = crowdClientHolder.getRestClient().getUser(userId);
-                return completeUserRolesAndSource(user);
+                User user = convertUser(crowdClientHolder.getCrowdClient().getUser(userId));
+                completeUserRolesAndSource(user);
+                return user;
             } catch (Exception e) {
                 logger.error("Unable to look up user " + userId, e);
                 throw new UserNotFoundException(userId, e.getMessage(), e);
@@ -98,9 +109,9 @@ public class CrowdUserManager extends AbstractReadOnlyUserManager {
     private Set<RoleIdentifier> getUsersRoles(String userId, String userSource) throws UserNotFoundException {
         if (SOURCE.equals(userSource)) {
             if (crowdClientHolder.isConfigured()) {
-                Set<String> roleNames = null;
+                List<String> roleNames = null;
                 try {
-                    roleNames = crowdClientHolder.getRestClient().getNestedGroups(userId);
+                    roleNames = crowdClientHolder.getCrowdClient().getNamesOfGroupsForNestedUser(userId,0, 100);
                 } catch (Exception e) {
                     logger.error("Unable to look up user " + userId, e);
                     return Collections.emptySet();
@@ -126,7 +137,8 @@ public class CrowdUserManager extends AbstractReadOnlyUserManager {
     public Set<String> listUserIds() {
         if (crowdClientHolder.isConfigured()) {
             try {
-                return crowdClientHolder.getRestClient().getAllUsernames();
+                List<String> userList = crowdClientHolder.getCrowdClient().searchUserNames(Restriction.on(UserTermKeys.ACTIVE).exactlyMatching(Boolean.TRUE), 0, maxResults);
+                return new HashSet<>(userList);
             } catch (Exception e) {
                 logger.error("Unable to get username list", e);
                 return Collections.emptySet();
@@ -160,17 +172,34 @@ public class CrowdUserManager extends AbstractReadOnlyUserManager {
         }
 
         try {
-            Set<User> result = crowdClientHolder.getRestClient().searchUsers(
-            		criteria.getUserId(),
-            		criteria.getEmail(),
-            		criteria.getOneOfRoleIds(),
-            		maxResults);
-            
-            for (User user : result) {
-				completeUserRolesAndSource(user);
-			}
-            
-            return result;
+            Set<com.atlassian.crowd.model.user.User> userResults = new HashSet<>(crowdClientHolder.getCrowdClient()
+                    .searchUsers(convertCriteria(criteria),0,maxResults));
+            Set<User> returnUsers = new HashSet<>();
+            if (!userResults.isEmpty()) {
+                if (criteria.getOneOfRoleIds() != null && !criteria.getOneOfRoleIds().isEmpty()) {
+                    // filter on group
+                    for (com.atlassian.crowd.model.user.User curUser : userResults) {
+                        Set<RoleIdentifier> roles = getUsersRoles(curUser.getName(), SOURCE);
+                        for (RoleIdentifier role : roles) {
+                            if (criteria.getOneOfRoleIds().contains(role.getRoleId())) {
+                                User newUser = convertUser(curUser);
+                                newUser.setRoles(roles);
+                                newUser.setSource(SOURCE);
+                                returnUsers.add(newUser);
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    for (com.atlassian.crowd.model.user.User curUser : userResults) {
+                        User newUser = convertUser(curUser);
+                        completeUserRolesAndSource(newUser);
+                        returnUsers.add(newUser);
+                    }
+                }
+            }
+
+            return returnUsers;
             
         } catch (Exception e) {
             logger.error("Unable to get userlist", e);
@@ -178,10 +207,39 @@ public class CrowdUserManager extends AbstractReadOnlyUserManager {
         }
     }
 
-    private User completeUserRolesAndSource(User user) throws UserNotFoundException {
+    private void completeUserRolesAndSource(User user) throws UserNotFoundException {
         user.setSource(SOURCE);
        	user.setRoles(getUsersRoles(user.getUserId(), SOURCE));
+    }
+
+    private User convertUser(com.atlassian.crowd.model.user.User crowdUser) {
+        User user = new DefaultUser();
+        user.setFirstName(crowdUser.getFirstName());
+        user.setLastName(crowdUser.getLastName());
+        user.setEmailAddress(crowdUser.getEmailAddress());
+        user.setUserId(crowdUser.getName());
+        user.setStatus(convertStatus(crowdUser.isActive()));
         return user;
+    }
+
+    private UserStatus convertStatus(boolean isActive) {
+        if (isActive) {
+            return UserStatus.active;
+        } else {
+            return UserStatus.disabled;
+        }
+    }
+
+    private SearchRestriction convertCriteria(UserSearchCriteria criteria) {
+        List<SearchRestriction> restrictions = new ArrayList<>();
+        if (StringUtils.isNotBlank(criteria.getEmail())) {
+            restrictions.add(Restriction.on(UserTermKeys.EMAIL).exactlyMatching(criteria.getEmail()));
+        }
+        if (StringUtils.isNotBlank(criteria.getUserId())) {
+            restrictions.add(Restriction.on(UserTermKeys.USERNAME).exactlyMatching(criteria.getUserId()));
+        }
+        restrictions.add(Restriction.on(UserTermKeys.ACTIVE).exactlyMatching(Boolean.TRUE));
+        return Combine.allOf(restrictions);
     }
 
 }

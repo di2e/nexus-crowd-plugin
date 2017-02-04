@@ -12,8 +12,8 @@
  */
 package org.sonatype.nexus.plugins.crowd.client;
 
+import com.atlassian.crowd.service.client.CrowdClient;
 import org.sonatype.nexus.plugins.crowd.caching.CachingAuthenticationManager;
-import org.sonatype.nexus.plugins.crowd.client.rest.RestClient;
 
 /**
  * Interface that allows the various client components of the Crowd plugin to
@@ -25,5 +25,5 @@ import org.sonatype.nexus.plugins.crowd.client.rest.RestClient;
 public interface CrowdClientHolder {
     public boolean isConfigured();
     public CachingAuthenticationManager getAuthenticationManager();
-    public RestClient getRestClient();
+    public CrowdClient getCrowdClient();
 }

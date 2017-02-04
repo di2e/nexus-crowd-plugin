@@ -73,9 +73,9 @@ public class CrowdTestPlexusResource extends AbstractPlexusResource {
     public Object get(Context context, Request request, Response response, Variant variant)
             throws ResourceException {
         try {
-            crowdClientHolder.getRestClient().getCookieConfig();
+            crowdClientHolder.getCrowdClient().getCookieConfiguration();
             return "<status>OK</status>";
-        } catch (RemoteException e) {
+        } catch (Exception e) {
             throw new ResourceException(Status.SERVER_ERROR_SERVICE_UNAVAILABLE,
                     "Unable to authenticate. Check configuration.", e);
         }

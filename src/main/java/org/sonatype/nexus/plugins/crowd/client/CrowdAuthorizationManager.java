@@ -12,7 +12,8 @@
  */
 package org.sonatype.nexus.plugins.crowd.client;
 
-import java.rmi.RemoteException;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Collections;
 
@@ -21,6 +22,9 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.atlassian.crowd.model.group.Group;
+import com.atlassian.crowd.search.builder.Restriction;
+import com.atlassian.crowd.search.query.entity.restriction.constants.UserTermKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonatype.security.authorization.AbstractReadOnlyAuthorizationManager;
@@ -61,8 +65,8 @@ public class CrowdAuthorizationManager extends AbstractReadOnlyAuthorizationMana
     public Role getRole(String roleId) throws NoSuchRoleException {
         if (crowdClientHolder.isConfigured()) {
             try {
-                Role role = crowdClientHolder.getRestClient().getGroup(roleId);
-                role.setSource(getSource());
+                Group crowdGroup = crowdClientHolder.getCrowdClient().getGroup(roleId);
+                Role role = convertGroupToRole(crowdGroup);
                 return role;
             } catch (Exception e) {
                 throw new NoSuchRoleException("Failed to get role " + roleId + " from Crowd.", e);
@@ -83,18 +87,29 @@ public class CrowdAuthorizationManager extends AbstractReadOnlyAuthorizationMana
     public Set<Role> listRoles() {
         if (crowdClientHolder.isConfigured()) {
             try {
-            	Set<Role> roles = crowdClientHolder.getRestClient().getAllGroups();
-            	for (Role role : roles) {
-            		role.setSource(getSource());
-            	}
+                List<Group> crowdGroups = crowdClientHolder.getCrowdClient().searchGroups(Restriction.on(UserTermKeys.ACTIVE).exactlyMatching(Boolean.TRUE), 0, 1000);
+            	Set<Role> roles = new HashSet<>();
+            	for (Group group : crowdGroups) {
+            	    roles.add(convertGroupToRole(group));
+                }
                 return roles;
-            } catch (RemoteException e) {
+            } catch (Exception e) {
                 logger.error("Unable to load roles", e);
                 return null;
             }
         }
         UnconfiguredNotifier.unconfigured();
         return Collections.emptySet();
+    }
+
+    private Role convertGroupToRole(Group group) {
+        Role role = new Role();
+        role.setName(group.getName());
+        role.setSource(getSource());
+        role.setDescription(group.getDescription());
+        role.setReadOnly(true);
+        role.setRoleId(group.getName());
+        return role;
     }
 
 }

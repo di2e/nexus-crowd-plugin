@@ -12,7 +12,7 @@
  */
 package org.sonatype.nexus.plugins.crowd;
 
-import java.rmi.RemoteException;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.enterprise.inject.Typed;
@@ -20,6 +20,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.atlassian.crowd.model.user.User;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -86,9 +87,11 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 		String password = new String(token.getPassword());
 
 		try {
-			crowdClientHolder.getAuthenticationManager().authenticate(token.getUsername(), password);
+			User user = crowdClientHolder.getCrowdClient().authenticateUser(token.getUsername(), password);
+			//TODO update to use local auth cache
+			logger.debug("User {} successfully authenticated.", user.getName());
 			return new SimpleAuthenticationInfo(token.getPrincipal(), token.getCredentials(), getName());
-		} catch (RemoteException e) {
+		} catch (Exception e) {
 			throw new AuthenticationException(DEFAULT_MESSAGE, e);
 		}
 	}
@@ -97,7 +100,7 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 	protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
 		String username = (String) principals.getPrimaryPrincipal();
 		try {
-			Set<String> groups = crowdClientHolder.getRestClient().getNestedGroups(username);
+			Set<String> groups = new HashSet<>(crowdClientHolder.getCrowdClient().getNamesOfGroupsForNestedUser(username, 0, 1000));
 			return new SimpleAuthorizationInfo(groups);
 		} catch (Exception e) {
 			throw new AuthorizationException(DEFAULT_MESSAGE, e);

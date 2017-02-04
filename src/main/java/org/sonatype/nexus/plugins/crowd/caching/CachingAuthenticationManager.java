@@ -15,9 +15,10 @@
  */
 package org.sonatype.nexus.plugins.crowd.caching;
 
-import java.rmi.RemoteException;
-
-import org.sonatype.nexus.plugins.crowd.client.rest.RestClient;
+import com.atlassian.crowd.embedded.api.PasswordCredential;
+import com.atlassian.crowd.integration.rest.entity.ValidationFactorEntityList;
+import com.atlassian.crowd.model.authentication.UserAuthenticationContext;
+import com.atlassian.crowd.service.client.CrowdClient;
 
 /**
  * Implementation of Crowd client's AuthenticationManager which caches tokens
@@ -30,24 +31,37 @@ import org.sonatype.nexus.plugins.crowd.client.rest.RestClient;
 public class CachingAuthenticationManager {
 
     private AuthBasicCache basicCache;
-    private RestClient restClient;
 
-    public CachingAuthenticationManager(RestClient restClient, AuthBasicCache basicCache) {
-    	this.restClient = restClient;
+    private CrowdClient crowdClient;
+
+    public CachingAuthenticationManager(CrowdClient crowdClient, AuthBasicCache basicCache) {
+    	this.crowdClient = crowdClient;
         this.basicCache = basicCache;
     }
   
-    public String authenticate(String username, String password) throws RemoteException {
+    public String authenticate(String username, String password) throws Exception {
         assert username != null;
         assert password != null;
 
         String token = basicCache.getToken(username, password);
         if (token == null) {
-            token = restClient.createSessionToken(username, password);
+            UserAuthenticationContext authenticationContext = createUserAuthContext(username, password);
+
+            token = crowdClient.authenticateSSOUser(authenticationContext);
 
             basicCache.addOrReplaceToken(username, password, token);
         }
         return token;
+    }
+
+    private UserAuthenticationContext createUserAuthContext(String username, String password) {
+        UserAuthenticationContext authenticationContext = new UserAuthenticationContext();
+        authenticationContext.setName(username);
+        authenticationContext.setCredential(new PasswordCredential(password));
+        //TODO get application and validation factors dynamically
+        authenticationContext.setApplication("nexus");
+        //authenticationContext.setValidationFactors();
+        return authenticationContext;
     }
  
 }
