@@ -22,6 +22,8 @@ import com.atlassian.crowd.service.client.CrowdClient;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.Initializable;
 import org.codehaus.plexus.personality.plexus.lifecycle.phase.InitializationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.sonatype.nexus.plugins.crowd.caching.AuthBasicCache;
 import org.sonatype.nexus.plugins.crowd.caching.AuthBasicCacheImpl;
 import org.sonatype.nexus.plugins.crowd.caching.CachingAuthenticationManager;
@@ -45,16 +47,21 @@ public class DefaultCrowdClientHolder extends AbstractLogEnabled implements Crow
     private CachingAuthenticationManager authManager;
     private CrowdClient crowdClient;
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultCrowdClientHolder.class);
+
     @Inject
     private CrowdPluginConfiguration crowdPluginConfiguration;
 
     public void initialize() throws InitializationException {
         configuration = crowdPluginConfiguration.getConfiguration();
         if (configuration != null) {
+            logger.debug("Configuring crowd with url: {} app name: {}", configuration.getCrowdServerUrl(), configuration.getApplicationName());
             basicCache = new AuthBasicCacheImpl(60 * configuration.getSessionValidationInterval());
             crowdClient = new RestCrowdClientFactory().newInstance(configuration.getCrowdServerUrl(), configuration.getApplicationName(), configuration.getApplicationPassword());
             authManager = new CachingAuthenticationManager(crowdClient, basicCache);
             configured = true;
+        } else {
+            logger.warn("Configuration was empty, could not set crowd plugin configurations.");
         }
     }
 

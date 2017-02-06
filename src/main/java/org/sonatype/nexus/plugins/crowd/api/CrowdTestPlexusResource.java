@@ -12,8 +12,6 @@
  */
 package org.sonatype.nexus.plugins.crowd.api;
 
-import java.rmi.RemoteException;
-
 import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
 import javax.inject.Named;

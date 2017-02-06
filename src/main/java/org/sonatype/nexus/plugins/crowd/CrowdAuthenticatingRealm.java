@@ -21,6 +21,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import com.atlassian.crowd.model.user.User;
+import com.atlassian.crowd.service.client.CrowdClient;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -40,6 +41,7 @@ import org.eclipse.sisu.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonatype.nexus.plugins.crowd.client.CrowdClientHolder;
+import org.sonatype.nexus.plugins.crowd.token.CrowdTokenAuthenticationToken;
 
 @Singleton
 @Typed(Realm.class)
@@ -70,6 +72,12 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 		return CrowdAuthenticatingRealm.class.getName();
 	}
 
+	@Override
+    public boolean supports(AuthenticationToken token) {
+	    logger.info("Checking to see if Crowd realm can handle token of type {}", token.getClass().toString());
+        return (token instanceof UsernamePasswordToken || token instanceof CrowdTokenAuthenticationToken);
+    }
+
 	public void initialize() throws InitializationException {
 		logger.info("Crowd Realm activated...");
 		active = true;
@@ -78,22 +86,34 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 	@Override
 	protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authenticationToken)
 			throws AuthenticationException {
-		if (!(authenticationToken instanceof UsernamePasswordToken)) {
-			throw new UnsupportedTokenException("Token of type " + authenticationToken.getClass().getName()
-					+ " is not supported.  A " + UsernamePasswordToken.class.getName() + " is required.");
-		}
-		UsernamePasswordToken token = (UsernamePasswordToken) authenticationToken;
+		if (authenticationToken instanceof UsernamePasswordToken) {
+			UsernamePasswordToken token = (UsernamePasswordToken) authenticationToken;
 
-		String password = new String(token.getPassword());
+			String password = new String(token.getPassword());
+			try {
+				User user = crowdClientHolder.getCrowdClient().authenticateUser(token.getUsername(), password);
+				//TODO update to use local auth cache
+				logger.debug("User {} successfully authenticated.", user.getName());
+				return new SimpleAuthenticationInfo(token.getPrincipal(), token.getCredentials(), getName());
+			} catch (Exception e) {
+				throw new AuthenticationException(DEFAULT_MESSAGE, e);
+			}
+		} else if (authenticationToken instanceof CrowdTokenAuthenticationToken) {
+			logger.info("Got a crowd token authentication token.");
+			try {
+				CrowdClient crowdClient = crowdClientHolder.getCrowdClient();
+				User user = crowdClient.findUserFromSSOToken(authenticationToken.getCredentials().toString());
+				logger.debug("Found user from SSO Token: {}", user.getName());
+				return new SimpleAuthenticationInfo(user.getName(), authenticationToken.getCredentials(), getName());
+			} catch (Exception e) {
+				logger.warn("Could not validate token.", e);
+				throw new AuthenticationException("Could not validate token.", e);
+			}
 
-		try {
-			User user = crowdClientHolder.getCrowdClient().authenticateUser(token.getUsername(), password);
-			//TODO update to use local auth cache
-			logger.debug("User {} successfully authenticated.", user.getName());
-			return new SimpleAuthenticationInfo(token.getPrincipal(), token.getCredentials(), getName());
-		} catch (Exception e) {
-			throw new AuthenticationException(DEFAULT_MESSAGE, e);
-		}
+		} else {
+            throw new UnsupportedTokenException("Token of type " + authenticationToken.getClass().getName()
+                    + " is not supported.  A " + UsernamePasswordToken.class.getName() + " is required.");
+        }
 	}
 
 	@Override
@@ -105,5 +125,11 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 		} catch (Exception e) {
 			throw new AuthorizationException(DEFAULT_MESSAGE, e);
 		}
+	}
+
+	@Override
+	public void onLogout(PrincipalCollection principals) {
+		clearCache(principals);
+
 	}
 }
