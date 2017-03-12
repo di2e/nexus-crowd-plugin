@@ -58,6 +58,18 @@
                     <required>true</required>
                 </field>
                 <field>
+                    <name>crowdCookieTokenKey</name>
+                    <description>Name of the cookie storing the crowd token.</description>
+                    <type>String</type>
+                    <required>true</required>
+                </field>
+                <field>
+                    <name>crowdCookieDomain</name>
+                    <description>Domain of the cookie storing the crowd token.</description>
+                    <type>String</type>
+                    <required>true</required>
+                </field>
+                <field>
                     <name>sessionValidationInterval</name>
                     <description>The Crowd session validation interval.</description>
                     <type>int</type>

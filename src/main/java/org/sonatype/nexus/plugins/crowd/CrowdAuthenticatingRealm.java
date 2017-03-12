@@ -127,9 +127,4 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 		}
 	}
 
-	@Override
-	public void onLogout(PrincipalCollection principals) {
-		clearCache(principals);
-
-	}
 }

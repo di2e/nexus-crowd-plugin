@@ -12,6 +12,8 @@
  */
 package org.sonatype.nexus.plugins.crowd.client;
 
+import com.atlassian.crowd.integration.http.CrowdHttpAuthenticator;
+import com.atlassian.crowd.service.client.ClientProperties;
 import com.atlassian.crowd.service.client.CrowdClient;
 import org.sonatype.nexus.plugins.crowd.caching.CachingAuthenticationManager;
 
@@ -23,7 +25,8 @@ import org.sonatype.nexus.plugins.crowd.caching.CachingAuthenticationManager;
  * @author Issa Gorissen
  */
 public interface CrowdClientHolder {
-    public boolean isConfigured();
-    public CachingAuthenticationManager getAuthenticationManager();
-    public CrowdClient getCrowdClient();
+    boolean isConfigured();
+    CachingAuthenticationManager getAuthenticationManager();
+    CrowdClient getCrowdClient();
+    CrowdHttpAuthenticator getCrowdHttpAuthenticator();
 }

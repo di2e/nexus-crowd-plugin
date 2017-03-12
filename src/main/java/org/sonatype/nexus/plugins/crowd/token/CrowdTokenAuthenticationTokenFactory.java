@@ -1,12 +1,12 @@
 /**
  * Copyright (C) 2017 DI2E (www.di2e.net)
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *         http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,10 +15,10 @@
  */
 package org.sonatype.nexus.plugins.crowd.token;
 
-import com.atlassian.crowd.model.authentication.CookieConfiguration;
+import com.atlassian.crowd.integration.http.CrowdHttpAuthenticator;
+import com.atlassian.crowd.integration.http.util.CrowdHttpValidationFactorExtractorImpl;
 import com.atlassian.crowd.service.client.CrowdClient;
 import org.apache.shiro.authc.AuthenticationToken;
-import org.apache.shiro.web.util.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonatype.nexus.plugins.crowd.client.CrowdClientHolder;
@@ -30,10 +30,8 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.Map;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Implementation for AuthenticationTokenFactory that creates AuthenticationTokens from cookie-based Crowd SSO tokens.
@@ -49,48 +47,29 @@ public class CrowdTokenAuthenticationTokenFactory implements AuthenticationToken
     @Inject
     private CrowdClientHolder crowdClientHolder;
 
-    private static final String DEFAULT_CROWD_COOKIE_NAME = "crowd.token_key";
-    private String crowdCookieName;
-
     private static final Logger logger = LoggerFactory.getLogger(CrowdTokenAuthenticationTokenFactory.class);
 
     @Override
     public AuthenticationToken createToken(ServletRequest request, ServletResponse response) {
-        if (crowdCookieName == null) {
-            setCrowdCookieName();
-        }
-        // get crowd token from request
-        Map<String, String> cookieMap = getCookieMap(WebUtils.toHttp(request));
-        if (cookieMap.containsKey(crowdCookieName)) {
-            logger.debug("Found a cookie with name {} and value {}, returning a CrowdTokenAuthToken.", crowdCookieName, cookieMap.get(crowdCookieName));
-            String crowdToken = cookieMap.get(crowdCookieName);
-            return new CrowdTokenAuthenticationToken(crowdToken, crowdToken, request.getRemoteHost());
+        HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+
+        CrowdClient crowdClient = crowdClientHolder.getCrowdClient();
+        CrowdHttpAuthenticator crowdHttpAuthenticator = crowdClientHolder.getCrowdHttpAuthenticator();
+        String token = crowdHttpAuthenticator.getToken(httpServletRequest);
+        if (token != null) {
+            try {
+                crowdClient.validateSSOAuthentication(token, CrowdHttpValidationFactorExtractorImpl.getInstance().getValidationFactors(httpServletRequest));
+                return new CrowdTokenAuthenticationToken(token, token, request.getRemoteHost());
+            } catch (Exception e) {
+                logger.warn("Could not check incoming authentication for crowd token.", e);
+            }
         } else {
-            logger.warn("Did not find a cookie with name {}", crowdCookieName);
+            logger.info("Did not find token in incoming request.");
         }
         return null;
     }
 
-    private Map<String, String> getCookieMap(HttpServletRequest request) {
-        Map<String, String> cookieMap = new HashMap<>();
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                cookieMap.put(cookie.getName(), cookie.getValue());
-            }
-        }
-        return cookieMap;
-    }
-
-    private synchronized void setCrowdCookieName() {
-        try {
-            CrowdClient crowdClient = crowdClientHolder.getCrowdClient();
-            CookieConfiguration cookieConfig = crowdClient.getCookieConfiguration();
-            crowdCookieName = cookieConfig.getName();
-        } catch (Exception e) {
-            logger.warn("Could not retrieve cookie configuration from server, defaulting to cookie name of " + DEFAULT_CROWD_COOKIE_NAME, e);
-            crowdCookieName = DEFAULT_CROWD_COOKIE_NAME;
-        }
-    }
 
 }
+
