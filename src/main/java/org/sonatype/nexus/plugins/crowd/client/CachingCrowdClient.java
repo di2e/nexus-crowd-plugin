@@ -22,12 +22,15 @@ import java.util.List;
 public class CachingCrowdClient extends RestCrowdClient implements CrowdClient {
 
     private final CacheManager ehCacheManager;
-    private static final String USERNAME_PASSWORD_CACHE = "com.atlassian.crowd.integration-auth-username";
+    private static final String CREDENTIAL_CACHE = "com.atlassian.crowd.integration-auth-username";
     private static final String TOKEN_CACHE = "com.atlassian.crowd.integration-auth-token";
     private static final String GROUP_CACHE = "com.atlassian.crowd.integration-group";
+    private static final String USER_CACHE = "com.atlassian.crowd.integration-user";
 
     // default TTL of 5 minutes
     private static final long DEFAULT_TTL = 300;
+
+    private static final int MAX_CACHE_ENTRIES = 10000;
 
     private static final Logger logger = LoggerFactory.getLogger(CachingCrowdClient.class);
 
@@ -35,16 +38,20 @@ public class CachingCrowdClient extends RestCrowdClient implements CrowdClient {
         super(clientProperties);
         this.ehCacheManager = CacheManager.getInstance();
 
-        if (!ehCacheManager.cacheExists(USERNAME_PASSWORD_CACHE)) {
-            Cache newCache = new Cache(USERNAME_PASSWORD_CACHE, 10000, false, false, DEFAULT_TTL, DEFAULT_TTL);
+        if (!ehCacheManager.cacheExists(CREDENTIAL_CACHE)) {
+            Cache newCache = new Cache(CREDENTIAL_CACHE, MAX_CACHE_ENTRIES, false, false, DEFAULT_TTL, DEFAULT_TTL);
             ehCacheManager.addCache(newCache);
         }
         if (!ehCacheManager.cacheExists(TOKEN_CACHE)) {
-            Cache newCache = new Cache(TOKEN_CACHE, 10000, false, false, DEFAULT_TTL, DEFAULT_TTL);
+            Cache newCache = new Cache(TOKEN_CACHE, MAX_CACHE_ENTRIES, false, false, DEFAULT_TTL, DEFAULT_TTL);
             ehCacheManager.addCache(newCache);
         }
         if (!ehCacheManager.cacheExists(GROUP_CACHE)) {
-            Cache newCache = new Cache(GROUP_CACHE, 10000, false, false, DEFAULT_TTL, DEFAULT_TTL);
+            Cache newCache = new Cache(GROUP_CACHE, MAX_CACHE_ENTRIES, false, false, DEFAULT_TTL, DEFAULT_TTL);
+            ehCacheManager.addCache(newCache);
+        }
+        if (!ehCacheManager.cacheExists(USER_CACHE)) {
+            Cache newCache = new Cache(USER_CACHE, MAX_CACHE_ENTRIES, false, false, DEFAULT_TTL, DEFAULT_TTL);
             ehCacheManager.addCache(newCache);
         }
     }
@@ -52,13 +59,13 @@ public class CachingCrowdClient extends RestCrowdClient implements CrowdClient {
     @Override
     public User authenticateUser(String username, String password) throws UserNotFoundException, InactiveAccountException, ExpiredCredentialException, ApplicationPermissionException, InvalidAuthenticationException, OperationFailedException {
         User user;
-        Element element = getUsernamePasswordCache().get(username + "#" + password);
+        Element element = getCredentialCache().get(username + "#" + password);
         if (element != null) {
             user = (User) element.getObjectValue();
             logger.debug("User {} successfully authenticated using cached credentials.", user.getName());
         } else {
             user = super.authenticateUser(username, password);
-            getUsernamePasswordCache().put(new Element(username + "#" + password, user));
+            getCredentialCache().put(new Element(username + "#" + password, user));
             logger.debug("User {} successfully authenticated and added to authentication cache.", user.getName());
         }
         return user;
@@ -94,8 +101,23 @@ public class CachingCrowdClient extends RestCrowdClient implements CrowdClient {
         return groups;
     }
 
-    private Cache getUsernamePasswordCache() {
-        return ehCacheManager.getCache(USERNAME_PASSWORD_CACHE);
+    @Override
+    public User getUser(String name) throws UserNotFoundException, ApplicationPermissionException, InvalidAuthenticationException, OperationFailedException {
+        User user;
+        Element element = getUserCache().get(name);
+        if (element != null) {
+            user = (User) element.getObjectValue();
+            logger.debug("Retrieved cached info for user ({}).", name);
+        } else {
+            user = super.getUser(name);
+            getUserCache().put(new Element(name, user));
+            logger.debug("Retrieved info for user ({}), caching internally.", name);
+        }
+        return user;
+    }
+
+    private Cache getCredentialCache() {
+        return ehCacheManager.getCache(CREDENTIAL_CACHE);
     }
 
     private Cache getTokenCache() {
@@ -104,5 +126,9 @@ public class CachingCrowdClient extends RestCrowdClient implements CrowdClient {
 
     private Cache getGroupCache() {
         return ehCacheManager.getCache(GROUP_CACHE);
+    }
+
+    private Cache getUserCache() {
+        return ehCacheManager.getCache(USER_CACHE);
     }
 }

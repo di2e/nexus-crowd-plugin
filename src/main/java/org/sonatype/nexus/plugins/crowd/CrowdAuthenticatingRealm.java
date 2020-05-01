@@ -74,7 +74,7 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 
 	@Override
     public boolean supports(AuthenticationToken token) {
-	    logger.info("Checking to see if Crowd realm can handle token of type {}", token.getClass().toString());
+	    logger.debug("Checking to see if Crowd realm can handle token of type {}", token.getClass().toString());
         return (token instanceof UsernamePasswordToken || token instanceof CrowdTokenAuthenticationToken);
     }
 
@@ -99,7 +99,7 @@ public class CrowdAuthenticatingRealm extends AuthorizingRealm implements Initia
 				throw new AuthenticationException(DEFAULT_MESSAGE, e);
 			}
 		} else if (authenticationToken instanceof CrowdTokenAuthenticationToken) {
-			logger.info("Got a crowd token authentication token.");
+			logger.debug("Got a crowd token authentication token.");
 			try {
 				CrowdClient crowdClient = crowdClientHolder.getCrowdClient();
 				User user = crowdClient.findUserFromSSOToken(authenticationToken.getCredentials().toString());
