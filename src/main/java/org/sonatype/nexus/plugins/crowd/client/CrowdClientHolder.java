@@ -26,7 +26,7 @@ import org.sonatype.nexus.plugins.crowd.caching.CachingAuthenticationManager;
  */
 public interface CrowdClientHolder {
     boolean isConfigured();
-    CachingAuthenticationManager getAuthenticationManager();
+    //CachingAuthenticationManager getAuthenticationManager();
     CrowdClient getCrowdClient();
     CrowdHttpAuthenticator getCrowdHttpAuthenticator();
 }

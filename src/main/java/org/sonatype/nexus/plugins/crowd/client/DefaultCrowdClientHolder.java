@@ -21,6 +21,8 @@ import com.atlassian.crowd.integration.http.CrowdHttpAuthenticator;
 import com.atlassian.crowd.integration.http.CrowdHttpAuthenticatorImpl;
 import com.atlassian.crowd.integration.http.util.CrowdHttpTokenHelperImpl;
 import com.atlassian.crowd.integration.http.util.CrowdHttpValidationFactorExtractorImpl;
+import com.atlassian.crowd.integration.rest.service.BasicAuthRestExecutor;
+import com.atlassian.crowd.integration.rest.service.RestCrowdClient;
 import com.atlassian.crowd.integration.rest.service.factory.RestCrowdClientFactory;
 import com.atlassian.crowd.service.client.ClientProperties;
 import com.atlassian.crowd.service.client.ClientPropertiesImpl;
@@ -50,9 +52,7 @@ import java.util.Properties;
 public class DefaultCrowdClientHolder extends AbstractLogEnabled implements CrowdClientHolder, Initializable {
 
     private boolean configured = false;
-    private AuthBasicCache basicCache;
     private Configuration configuration;
-    private CachingAuthenticationManager authManager;
 
     private ClientProperties clientProperties;
     private CrowdClient crowdClient;
@@ -68,13 +68,13 @@ public class DefaultCrowdClientHolder extends AbstractLogEnabled implements Crow
         if (configuration != null) {
             Properties crowdProperties = convertToCrowdProperties(configuration);
             clientProperties = ClientPropertiesImpl.newInstanceFromProperties(crowdProperties);
-            crowdClient = new RestCrowdClientFactory().newInstance(clientProperties);
-            crowdHttpAuthenticator = new CrowdHttpAuthenticatorImpl(crowdClient, clientProperties, CrowdHttpTokenHelperImpl.getInstance(CrowdHttpValidationFactorExtractorImpl.getInstance()));
+            //crowdClient = new RestCrowdClientFactory().newInstance(clientProperties);
 
             logger.debug("Configuring crowd with url: {} app name: {}", configuration.getCrowdServerUrl(), configuration.getApplicationName());
-            basicCache = new AuthBasicCacheImpl(60 * configuration.getSessionValidationInterval());
-            crowdClient = new RestCrowdClientFactory().newInstance(configuration.getCrowdServerUrl(), configuration.getApplicationName(), configuration.getApplicationPassword());
-            authManager = new CachingAuthenticationManager(crowdClient, basicCache);
+            //basicCache = new AuthBasicCacheImpl(60 * configuration.getSessionValidationInterval());
+            //crowdClient = new RestCrowdClientFactory().newInstance(configuration.getCrowdServerUrl(), configuration.getApplicationName(), configuration.getApplicationPassword());
+            crowdClient = new CachingCrowdClient(clientProperties);
+            crowdHttpAuthenticator = new CrowdHttpAuthenticatorImpl(crowdClient, clientProperties, CrowdHttpTokenHelperImpl.getInstance(CrowdHttpValidationFactorExtractorImpl.getInstance()));
             configured = true;
         } else {
             logger.warn("Configuration was empty, could not set crowd plugin configurations.");
@@ -86,10 +86,6 @@ public class DefaultCrowdClientHolder extends AbstractLogEnabled implements Crow
      */
     public boolean isConfigured() {
         return configured;
-    }
-
-    public CachingAuthenticationManager getAuthenticationManager() {
-    	return authManager;
     }
 
     public CrowdClient getCrowdClient() {
